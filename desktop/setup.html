@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:" />
+    <title>连接 LitBench 服务端</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #2b2822;
+        --paper: #f7f1e5;
+        --line: #d9cdb8;
+        --accent: #8d3b2f;
+        --muted: #766f62;
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        font-family: "Songti SC", "Noto Serif SC", serif;
+        color: var(--ink);
+        background:
+          radial-gradient(1200px 600px at 15% -10%, #fffdf8 0%, transparent 60%),
+          var(--paper);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 28px;
+      }
+      main { width: 100%; max-width: 560px; }
+      .brand { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+      .brand b { font-size: 26px; letter-spacing: 0.04em; }
+      .brand span { color: var(--muted); font-size: 13px; }
+      h1 { font-size: 19px; margin: 18px 0 8px; font-weight: 600; }
+      p { color: var(--muted); font-size: 13.5px; line-height: 1.7; margin: 0 0 14px; }
+      label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+      input {
+        width: 100%;
+        padding: 11px 12px;
+        font: inherit;
+        font-size: 14px;
+        color: var(--ink);
+        background: #fffdf8;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        outline: none;
+      }
+      input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(141, 59, 47, 0.12); }
+      .hint { margin-top: 8px; font-size: 12px; color: var(--muted); }
+      .error { color: #a12c1f; font-size: 12.5px; min-height: 18px; margin-top: 8px; }
+      .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+      button {
+        font: inherit;
+        font-size: 14px;
+        padding: 10px 18px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: transparent;
+        color: var(--ink);
+        cursor: pointer;
+      }
+      button.primary {
+        background: var(--ink);
+        border-color: var(--ink);
+        color: #f9f4ea;
+      }
+      button:disabled { opacity: 0.55; cursor: default; }
+      .fine { margin-top: 18px; font-size: 11.5px; color: #8c8477; line-height: 1.6; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="brand"><b>LitBench</b><span>文献证据工作台 · 桌面客户端</span></div>
+      <h1>连接服务端</h1>
+      <p>
+        这个客户端只包含界面，不携带文献库或 API Key。请填写 LitBench 服务端地址；
+        默认是本机 <code>http://127.0.0.1:8000</code>，也可以填局域网/HTTPS 地址。
+      </p>
+      <label for="server-url">服务端地址</label>
+      <input id="server-url" spellcheck="false" placeholder="http://127.0.0.1:8000" />
+      <div class="hint">之后可在菜单「LitBench → 设置服务端地址…」里修改。</div>
+      <div class="error" id="error"></div>
+      <div class="actions">
+        <button id="cancel">稍后设置</button>
+        <button id="connect" class="primary">保存并连接</button>
+      </div>
+      <div class="fine">
+        客户端只保存这一个服务端地址，不保存登录凭据；登录仍在网页界面内完成。
+      </div>
+    </main>
+    <script>
+      const input = document.getElementById('server-url')
+      const error = document.getElementById('error')
+      const connect = document.getElementById('connect')
+      window.litbenchSetup.getServerUrl().then((url) => {
+        input.value = url
+        input.focus()
+        input.select()
+      })
+      input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') connect.click()
+      })
+      connect.addEventListener('click', async () => {
+        error.textContent = ''
+        connect.disabled = true
+        try {
+          const result = await window.litbenchSetup.saveServerUrl(input.value)
+          if (!result.ok) error.textContent = result.error
+        } catch (err) {
+          error.textContent = err && err.message ? err.message : String(err)
+        } finally {
+          connect.disabled = false
+        }
+      })
+      document.getElementById('cancel').addEventListener('click', () => {
+        window.litbenchSetup.cancel()
+      })
+    </script>
+  </body>
+</html>

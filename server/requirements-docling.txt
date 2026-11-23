@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Docling 增强档依赖 —— **不装进默认镜像**。
+# 原因：它会把 torch 一起带进来（镜像 +2GB），而绝大多数有文字层的 PDF
+# 用 pdfium 轻量档就够了。需要时用构建参数打开：
+#
+#   docker compose build --build-arg INSTALL_DOCLING=1 worker
+#   或 compose.yaml 里设 INSTALL_DOCLING=1
+#
+# 许可证：Docling 是 MIT，可以进主镜像（清单见 THIRD_PARTY.md）。
+
+docling>=2.150

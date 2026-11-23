@@ -1,0 +1,12 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: litbench
+Upstream-Contact: LitBench contributors
+Source: https://github.com/AmosLu1129/LitBench
+
+Files: *
+Copyright: 2026 LitBench contributors
+License: AGPL-3.0-or-later
+
+Files: schemas/* mcp/* schemas/** mcp/**
+Copyright: 2026 LitBench contributors
+License: MIT

@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# 轻量 OCR（扫描页 → RapidOCR PP-OCR mobile）——个人版默认可选依赖。
+# 不是 Docling/MinerU：不装 torch，不下载大模型；RapidOCR 包自带 det/rec/cls 权重。
+#
+#   pip install -r requirements-ocr-lite.txt
+#
+# 许可证：RapidOCR Apache-2.0，ONNX Runtime MIT；可以随桌面客户端分发。
+rapidocr>=3.0
+onnxruntime>=1.18

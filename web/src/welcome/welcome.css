@@ -1,0 +1,359 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later
+   欢迎页《窗前晨光》—— 独立样式，不引用主应用的 token，避免污染工作台。 */
+
+.welcome {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #0c0a09;
+  color: #efe3c9;
+  font-family: 'Source Han Serif SC', 'Noto Serif CJK SC', 'SimSun', 'STSong', 'Songti SC', serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+.welcome-stage,
+.welcome-static,
+.welcome-veil,
+.welcome-light {
+  position: absolute;
+  inset: 0;
+}
+
+.welcome-canvas-el {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* WebGL 不可用时的静态兜底：同构图的光影渐变 */
+.welcome-static {
+  background:
+    radial-gradient(58% 46% at 40% 54%, rgba(240, 193, 133, 0.2), transparent 72%),
+    radial-gradient(38% 38% at 12% 80%, rgba(255, 154, 69, 0.16), transparent 72%),
+    linear-gradient(180deg, #0d0b09 0%, #16110d 52%, #0a0807 100%);
+}
+
+/* 开场压暗，标题先出、画面后到 */
+.welcome-veil {
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 46%, rgba(0, 0, 0, 0) 36%, rgba(6, 5, 4, 0.74) 100%);
+}
+
+.welcome-veil::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #0c0a09;
+  opacity: 1;
+  transition: opacity 1.6s ease 0.2s;
+}
+
+.welcome.is-ready .welcome-veil::before {
+  opacity: 0;
+}
+
+.welcome-ui {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* ---------- 右侧竖排题字 ---------- */
+.welcome-col {
+  position: absolute;
+  right: max(6vw, 40px);
+  top: 9vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.welcome-title {
+  margin: 0;
+  writing-mode: vertical-rl;
+  font-size: clamp(46px, 5.4vw, 86px);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.07em;
+  color: #f2e7cf;
+  text-shadow: 0 2px 30px rgba(0, 0, 0, 0.6), 0 0 80px rgba(240, 193, 133, 0.14);
+  animation: welcome-ink-in 2.8s cubic-bezier(0.22, 0.8, 0.24, 1) 0.25s both;
+}
+
+.welcome-sign {
+  writing-mode: vertical-rl;
+  font-size: clamp(10px, 0.78vw, 12px);
+  letter-spacing: 0.26em;
+  color: rgba(239, 227, 201, 0.68);
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.85);
+  animation: welcome-fade 2s ease 1.5s both;
+}
+
+.welcome-seal {
+  position: relative;
+  width: clamp(46px, 3.8vw, 58px);
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  writing-mode: vertical-rl;
+  background: #a63b2b;
+  color: #f3e6d2;
+  font-size: clamp(14px, 1.2vw, 18px);
+  letter-spacing: 0.14em;
+  border-radius: 2px;
+  transform: rotate(-2.6deg);
+  box-shadow: 0 6px 22px rgba(120, 30, 20, 0.4);
+  animation: welcome-fade 1.6s ease 2.4s both;
+}
+
+.welcome-seal::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgba(243, 230, 210, 0.42);
+}
+
+/* ---------- 左侧副标 ---------- */
+.welcome-sub {
+  position: absolute;
+  left: max(6vw, 40px);
+  bottom: 37vh;
+  width: 19em;
+  margin: 0;
+  font-size: clamp(13px, 1.02vw, 16px);
+  letter-spacing: 0.26em;
+  line-height: 2.35;
+  color: rgba(239, 227, 201, 0.74);
+  text-wrap: balance;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.85), 0 0 40px rgba(0, 0, 0, 0.6);
+  transition: opacity 0.9s ease, transform 0.9s ease;
+  animation: welcome-fade 2.2s ease 1.9s both;
+}
+
+/* ---------- 动作 ---------- */
+.welcome-actions {
+  position: absolute;
+  left: max(6vw, 40px);
+  bottom: 27vh;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  padding: 10px 16px;
+  margin-left: -16px;
+  background: rgba(10, 8, 6, 0.3);
+  backdrop-filter: blur(8px);
+  pointer-events: auto;
+  animation: welcome-fade 1.8s ease 2.8s both;
+}
+
+.welcome-btn {
+  padding: 6px 2px;
+  border: 0;
+  border-bottom: 1px solid rgba(239, 227, 201, 0.18);
+  background: none;
+  color: rgba(239, 227, 201, 0.5);
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.3em;
+  cursor: pointer;
+  transition: color 0.4s, border-color 0.4s;
+}
+
+.welcome-btn:hover {
+  color: rgba(239, 227, 201, 0.9);
+  border-color: rgba(239, 227, 201, 0.5);
+}
+
+.welcome-enter {
+  position: relative;
+  padding: 13px 30px 13px 34px;
+  border: 1px solid rgba(239, 227, 201, 0.32);
+  background: rgba(12, 10, 9, 0.18);
+  color: #efe3c9;
+  font: inherit;
+  font-size: 14px;
+  letter-spacing: 0.5em;
+  cursor: pointer;
+  transition: background 0.6s, border-color 0.6s, letter-spacing 0.6s;
+}
+
+.welcome-enter:hover {
+  background: rgba(239, 227, 201, 0.1);
+  border-color: rgba(239, 227, 201, 0.62);
+  letter-spacing: 0.58em;
+}
+
+.welcome-enter span {
+  letter-spacing: 0;
+  margin-left: 0.2em;
+}
+
+.welcome-foot {
+  position: absolute;
+  right: calc(max(3.2vw, 22px) + 56px);
+  bottom: 5vh;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: rgba(239, 227, 201, 0.32);
+  white-space: nowrap;
+  transition: opacity 0.9s ease;
+  animation: welcome-fade 2s ease 3.4s both;
+}
+
+/* 镜头推近书页时，文字后退一步，把画面让给那页纸 */
+.welcome[data-phase='inspect'] .welcome-sub,
+.welcome[data-phase='inspect'] .welcome-foot {
+  animation: none;
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.welcome[data-phase='inspect'] .welcome-sign,
+.welcome[data-phase='inspect'] .welcome-seal {
+  animation: none;
+  opacity: 0.22;
+  transition: opacity 0.9s ease;
+}
+
+/* ---------- 声音 ---------- */
+.welcome-sound {
+  position: absolute;
+  right: max(3.2vw, 22px);
+  bottom: 5.4vh;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(239, 227, 201, 0.2);
+  border-radius: 50%;
+  background: rgba(12, 10, 9, 0.35);
+  color: rgba(239, 227, 201, 0.62);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: border-color 0.5s, color 0.5s, background 0.5s;
+}
+
+.welcome-sound.is-on {
+  border-color: rgba(166, 59, 43, 0.72);
+  color: #e6ae9c;
+}
+
+.welcome-hint {
+  position: absolute;
+  right: max(3.2vw, 22px);
+  bottom: 11vh;
+  max-width: 170px;
+  text-align: right;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  line-height: 1.8;
+  color: rgba(239, 227, 201, 0.4);
+  animation: welcome-fade 1.2s ease 2.4s both;
+}
+
+/* ---------- 转场：过曝到白 ---------- */
+.welcome-light {
+  background: #fff6e6;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.75s ease;
+}
+
+.welcome.is-leaving .welcome-light {
+  opacity: 1;
+}
+
+@keyframes welcome-ink-in {
+  0% {
+    opacity: 0;
+    filter: blur(18px);
+    transform: translateY(-10px);
+  }
+  55% {
+    opacity: 0.82;
+    filter: blur(5px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+@keyframes welcome-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ---------- 响应式 ---------- */
+@media (max-width: 1024px) {
+  .welcome-title {
+    font-size: clamp(42px, 8vw, 72px);
+  }
+  .welcome-sub {
+    width: 12em;
+    bottom: 30vh;
+  }
+}
+
+@media (max-width: 760px) and (orientation: portrait) {
+  .welcome-col {
+    left: 0;
+    right: 0;
+    top: 9vh;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+  }
+  .welcome-title {
+    writing-mode: horizontal-tb;
+    font-size: clamp(34px, 11vw, 52px);
+    letter-spacing: 0.14em;
+  }
+  .welcome-sign {
+    writing-mode: horizontal-tb;
+    letter-spacing: 0.26em;
+  }
+  .welcome-seal {
+    width: 40px;
+  }
+  .welcome-sub {
+    left: 8vw;
+    right: 8vw;
+    bottom: 24vh;
+    width: auto;
+    font-size: 13px;
+    letter-spacing: 0.18em;
+    line-height: 2;
+  }
+  .welcome-actions {
+    left: 8vw;
+    bottom: 13vh;
+  }
+  .welcome-foot {
+    left: 8vw;
+    bottom: 6.5vh;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-title,
+  .welcome-sign,
+  .welcome-seal,
+  .welcome-sub,
+  .welcome-actions,
+  .welcome-foot,
+  .welcome-hint {
+    animation: none;
+  }
+}

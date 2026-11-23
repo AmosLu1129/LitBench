@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "litbench": {
+      "command": "python",
+      "args": [
+        "-m",
+        "litbench_mcp",
+        "serve",
+        "--api",
+        "http://127.0.0.1:8000"
+      ]
+    }
+  }
+}

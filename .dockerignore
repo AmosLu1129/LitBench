@@ -1,0 +1,55 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Docker 构建上下文（compose 里两个 build.context 都是仓库根）实际只需要
+# server/ 和 web/。不排掉下面这些，.git / .venv / .data / node_modules 会被
+# 整个送进 daemon：构建变慢、占磁盘；更糟的是宿主 node_modules 会在
+# `COPY web/ ./` 时覆盖容器里 `npm ci` 装好的依赖。
+#
+# 注意：不要排除 server/、web/、schemas/、mcp/——它们是构建/运行需要的。
+
+# --- 版本库 / 环境 / 运行时数据 ---
+.git
+.github
+.gitignore
+.gitattributes
+.venv
+venv
+.data
+.hf-cache
+.pytest_cache
+.ruff_cache
+.mypy_cache
+.coverage
+htmlcov
+torchinductor_*
+
+# 环境文件：宿主 .env 里可能有 LLM key，绝不能进构建上下文/镜像
+.env
+**/.env
+.env.local
+**/.env.local
+.env.*.local
+**/.env.*.local
+
+# --- Python ---
+**/__pycache__
+**/*.py[cod]
+**/*.egg-info
+**/.pytest_cache
+**/pytest-of-*
+**/.pytest_tmp
+
+# --- Node ---
+**/node_modules
+**/dist
+**/build
+**/.vite
+
+# --- 文档大件 / 本地数据 / 系统杂项 ---
+docs/assets
+**/*.db
+**/*.sqlite
+**/*.sqlite3
+**/*.log
+.DS_Store
+Thumbs.db

@@ -1,0 +1,97 @@
+# SPDX-License-Identifier: MIT
+#
+# LitBench schema pack — 通用科学
+# 字段 key 即卡片 JSON 的键名；改动字段需升 version。
+# 领域包（材料、生物医学、地学…）在此基础之上增删，不要直接改本文件。
+
+id: general
+name: 通用科学
+version: 0.1.0
+description: >-
+  默认卡片字段，适用于任意学科。只收录「跨领域都会问」的维度；
+  领域特异字段（如样品制备、纳入排除标准）放到各自的包里。
+
+fields:
+  - key: research_question
+    label: 研究问题
+    type: text
+    required: true
+
+  - key: background_gap
+    label: 前人缺口
+    type: text
+    note: 作者声称补了什么洞；没明说就留空，不要猜
+
+  - key: method
+    label: 方法
+    type: text
+    required: true
+
+  - key: sample_or_data
+    label: 样品 / 数据
+    type: text
+    note: 材料体系、数据来源、样本量
+
+  - key: key_results
+    label: 关键结果
+    type: list
+    note: 每条尽量带数字与单位；数字必须能在原文找到对应 block
+
+  - key: conclusion
+    label: 结论
+    type: text
+
+  - key: limitations
+    label: 局限
+    type: list
+    note: 作者自述的局限与推断出的边界分开标注来源
+
+  - key: applicability
+    label: 适用范围
+    type: object
+    fields:
+      - key: system
+        label: 体系 / 对象
+      - key: conditions
+        label: 条件区间
+        note: 温度、压力、浓度、时间尺度等
+      - key: assumptions
+        label: 假设
+      - key: failure_boundary
+        label: 失效边界
+        note: 什么情况下结论不成立
+
+  - key: reusable_figures
+    label: 可复用图表
+    type: figure_refs
+    note: 指向 figure.cite_key，不复制图片本体
+
+# 跨文献对比矩阵的默认列
+compare_dimensions:
+  - method
+  - sample_or_data
+  - conditions
+  - key_results
+  - conclusion
+  - applicability
+
+figure_types:
+  - chart        # 折线 / 柱状 / 散点等数据图
+  - micrograph   # 显微、电镜、成像
+  - photo        # 实物照片
+  - map          # 地质 / 地理 / 空间分布
+  - diagram      # 装置、流程、原理示意
+  - structure    # 分子、晶体、解剖结构
+  - other
+
+extraction:
+  evidence_required: true   # 每个字段必须挂 block_id，否则整条丢弃
+  temperature: 0
+  max_retries: 2
+  max_input_tokens: 120000
+  chunking: section         # section | page | fixed
+
+prompt_hints: |
+  - 只抽取原文明确写出的内容；属于推断的标 source: inferred。
+  - 数字原样保留单位与有效数字，不要换算、不要四舍五入。
+  - 「适用范围」优先抄作者给出的条件；作者没写就留空，不要用常识补。

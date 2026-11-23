@@ -1,0 +1,220 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# LitBench 自部署栈
+#   默认档：postgres / api / worker / web
+#   OCR 增强档：docker compose --profile ocr up
+#
+# AGPL 组件（MinerU）只出现在 ocr profile 里，不进主镜像 —— 见 LICENSING.md
+
+name: litbench
+
+x-app-env: &app-env
+  # schema 必须显式带 asyncpg：server/litbench/db.py 用 create_async_engine，
+  # 镜像也只装了 asyncpg。写成裸 postgresql:// 会在启动时报缺 psycopg。
+  DATABASE_URL: postgresql+asyncpg://litbench:${POSTGRES_PASSWORD:-litbench}@postgres:5432/litbench
+  STORAGE_DIR: /data
+  # pdfium（默认，零模型）| docling（增强档，需 INSTALL_DOCLING=1）| mineru
+  PARSER_BACKEND: ${PARSER_BACKEND:-pdfium}
+  # Docling / HF 模型缓存：挂卷复用，重建容器不重下
+  HF_HOME: /models
+  HF_ENDPOINT: ${HF_ENDPOINT:-https://hf-mirror.com}
+
+  # .env 只用于 compose 插值，不会自动进容器；下面这些必须显式注入。
+  # 默认值与 server/litbench/config.py 一致，且类型要能被 pydantic 解析
+  # （bool/int/float 不能给空字符串）。新增配置项也要同步加到这里。
+  LLM_PROVIDER: ${LLM_PROVIDER:-mock}
+  LLM_BASE_URL: ${LLM_BASE_URL:-}
+  LLM_API_KEY: ${LLM_API_KEY:-}
+  LLM_MODEL: ${LLM_MODEL:-}
+  LLM_TIMEOUT_S: ${LLM_TIMEOUT_S:-60.0}
+  LLM_MAX_TOKENS: ${LLM_MAX_TOKENS:-1200}
+  # 认证（团队共享）：默认关闭 = 单机模式；局域网部署设 AUTH_ENABLED=1 后初始化管理员
+  AUTH_ENABLED: ${AUTH_ENABLED:-0}
+  AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
+  AUTH_SESSION_DAYS: ${AUTH_SESSION_DAYS:-14}
+  # MCP 内部服务令牌：认证打开后 MCP 用请求头 X-LitBench-Internal-Token 以 system 身份调 API。
+  # 与宿主机 MCP 的 LITBENCH_MCP_API_TOKEN 必须是同一个值；空 = 不启用。
+  INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-}
+  OCR_BACKEND: ${OCR_BACKEND:-mineru}
+  OCR_CROSS_ENABLED: ${OCR_CROSS_ENABLED:-true}
+  OCR_CROSS_DPI: ${OCR_CROSS_DPI:-200}
+  ESCALATE_BACKEND: ${ESCALATE_BACKEND:-docling}
+  ESCALATE_MIN_MISSING: ${ESCALATE_MIN_MISSING:-1}
+  ESCALATE_MIN_CAPTION_CHARS: ${ESCALATE_MIN_CAPTION_CHARS:-40}
+  RENDER_FIGURE_IMAGES: ${RENDER_FIGURE_IMAGES:-true}
+  FILTER_QR_FIGURES: ${FILTER_QR_FIGURES:-true}
+  MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-200}
+  CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:8080}
+  SUMMARY_AUTO_ACCEPT_CONFIDENCE: ${SUMMARY_AUTO_ACCEPT_CONFIDENCE:-0.9}
+  # M8 写作/导出：pandoc/typst 已在镜像 PATH；这两个变量留给自定义安装位置
+  PANDOC_PATH: ${PANDOC_PATH:-}
+  TYPST_PATH: ${TYPST_PATH:-}
+  DOCX_EXPORT_ENABLED: ${DOCX_EXPORT_ENABLED:-true}
+  PDF_EXPORT_ENABLED: ${PDF_EXPORT_ENABLED:-true}
+  PDF_MAIN_FONT: ${PDF_MAIN_FONT:-}
+  # Crossref 礼貌池联系邮箱（可空，只进 User-Agent，不落库）
+  CROSSREF_MAILTO: ${CROSSREF_MAILTO:-}
+
+x-app-build: &app-build
+  context: .
+  dockerfile: server/Dockerfile
+  args:
+    # 1 = 装 Docling + torch（约 +2GB）
+    INSTALL_DOCLING: ${INSTALL_DOCLING:-0}
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: litbench
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-litbench}
+      POSTGRES_DB: litbench
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U litbench -d litbench"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: *app-build
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      MINERU_URL: ${MINERU_URL:-}
+      # 迁移只在 api 容器执行一次；worker 设 0 并等 api healthy
+      RUN_MIGRATIONS: "1"
+    volumes:
+      - data:/data
+      - hf_cache:/models
+    ports:
+      # 默认只绑本机回环：局域网/反代场景不要让 API 直接暴露（用 proxy 的 443）
+      - "${API_BIND:-127.0.0.1}:${API_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  worker:
+    build: *app-build
+    restart: unless-stopped
+    command: ["python", "-m", "litbench.workers.run"]
+    environment:
+      <<: *app-env
+      MINERU_URL: ${MINERU_URL:-}
+      RUN_MIGRATIONS: "0"
+    volumes:
+      - data:/data
+      - hf_cache:/models
+    # 镜像的 HEALTHCHECK 探 8000 端口，worker 不监听 8000 → 不关掉会永远 unhealthy
+    healthcheck:
+      disable: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      # 等 api 跑完 alembic upgrade head 且 /api/ready 通过后再起 worker，
+      # 避免两个容器并发迁移
+      api:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${WEB_BIND:-127.0.0.1}:${WEB_PORT:-8080}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------
+  # 局域网入口：HTTPS 反代（docker compose --profile lan up -d）
+  #
+  # 证书放 .data/certs/server.crt / server.key（scripts/gen_selfsigned_cert.sh
+  # 可生成自签测试证书；正式环境换成内部 CA / Let's Encrypt 证书）。
+  # api/web 默认只绑 127.0.0.1，局域网只经这一层 443 进来。
+  # 用 HTTPS 时 .env 里 AUTH_COOKIE_SECURE 要设 true（cookie 带 Secure）。
+  # ---------------------------------------------------------------
+  proxy:
+    profiles: ["lan"]
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "${HTTPS_BIND:-0.0.0.0}:${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./deploy/nginx-lan.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./.data/certs:/etc/nginx/certs:ro
+    depends_on:
+      web:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-check-certificate -q -O /dev/null https://127.0.0.1/ || exit 1",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ---------------------------------------------------------------
+  # MCP 出口容器（docker compose --profile mcp up -d）
+  #
+  # 先用同一个卷发一个客户端 Bearer token（只存 sha256）：
+  #   docker compose --profile mcp run --rm mcp \
+  #     token issue --scope agent-read,agent-propose,agent-task --label dsh
+  # （镜像 ENTRYPOINT 已经是 litbench-mcp，run 后面直接跟子命令）
+  # 再启动；HTTP 传输始终要求 Bearer token（与 API 的 INTERNAL_API_TOKEN 区分：
+  # 后者是 MCP → API 的服务间令牌，前者是 agent → MCP 的客户端令牌）。
+  # ---------------------------------------------------------------
+  mcp:
+    profiles: ["mcp"]
+    build:
+      context: .
+      dockerfile: mcp/Dockerfile
+    restart: unless-stopped
+    environment:
+      LITBENCH_MCP_API: http://api:8000
+      LITBENCH_MCP_API_TOKEN: ${INTERNAL_API_TOKEN:-}
+      LITBENCH_MCP_STATE_DIR: /mcp-state
+      LITBENCH_MCP_TRANSPORT: streamable-http
+      LITBENCH_MCP_HOST: 0.0.0.0
+      LITBENCH_MCP_PORT: "8765"
+      LITBENCH_MCP_LOG_LEVEL: ${LITBENCH_MCP_LOG_LEVEL:-INFO}
+    volumes:
+      - mcp_state:/mcp-state
+    ports:
+      # 默认只给本机 agent 用；局域网 agent 再把 MCP_BIND 改成 0.0.0.0（走 TLS 反代更稳）
+      - "${MCP_BIND:-127.0.0.1}:${MCP_PORT:-8765}:8765"
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------
+  # 可选：AGPL-3.0 组件，仅在 --profile ocr 下启动
+  # 模型权重不随镜像分发，需自行准备并遵守其许可证
+  # ---------------------------------------------------------------
+  mineru:
+    profiles: ["ocr"]
+    # TODO(P0): 确认官方镜像名与标签后替换
+    image: ${MINERU_IMAGE:-opendatalab/mineru:latest}
+    restart: unless-stopped
+    volumes:
+      - data:/data
+    # 需要 GPU 时取消注释（宿主机需先装 nvidia-container-toolkit）
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+volumes:
+  pgdata:
+  data:
+  hf_cache:
+  mcp_state:
