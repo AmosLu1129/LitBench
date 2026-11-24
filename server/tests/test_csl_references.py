@@ -262,13 +262,19 @@ def test_find_pandoc_prefers_bundled_over_path(tmp_path, monkeypatch) -> None:
     import os
 
     executable = "pandoc.exe" if os.name == "nt" else "pandoc"
-    bundled = tmp_path / "tools" / "pandoc" / "3.14" / executable
-    bundled.parent.mkdir(parents=True)
-    bundled.write_text("")
-    monkeypatch.setattr(settings, "storage_dir", tmp_path)
     monkeypatch.setattr("litbench.toolchain._PROJECT_ROOT", tmp_path / "no-project-tools")
     monkeypatch.setattr("litbench.toolchain.shutil.which", lambda name: "/usr/bin/old-pandoc")
-    assert csl.find_pandoc() == str(bundled)
+
+    for label, rel in (
+        ("flat", ("tools", "pandoc", "3.14", executable)),
+        ("posix", ("tools", "pandoc", "3.14", "bin", executable)),
+    ):
+        storage = tmp_path / label
+        bundled = storage.joinpath(*rel)
+        bundled.parent.mkdir(parents=True)
+        bundled.write_text("")
+        monkeypatch.setattr(settings, "storage_dir", storage)
+        assert csl.find_pandoc() == str(bundled)
 
 
 @requires_pandoc

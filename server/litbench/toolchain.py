@@ -50,9 +50,10 @@ def find_tool(
         _PROJECT_ROOT / ".data" / "tools" / subdir,
     ):
         if tools.is_dir():
-            bundled.extend(
-                path for path in tools.glob(f"*/{executable}") if path.is_file()
-            )
+            for pattern in (f"*/{executable}", f"*/bin/{executable}"):
+                bundled.extend(
+                    path for path in tools.glob(pattern) if path.is_file()
+                )
     if bundled:
         # 多个版本共存时用最新的（按修改时间，不按字符串排序，3.14 要排在 3.9 前）
         return str(max(bundled, key=lambda path: path.stat().st_mtime))

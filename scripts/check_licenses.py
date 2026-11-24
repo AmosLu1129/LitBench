@@ -48,6 +48,9 @@ ALLOWLIST = {
 
 
 def main(path: str) -> int:
+    # --with-license-file 会把完整许可证正文写入 CSV；opencv-python-headless 的
+    # LICENSE-3RD-PARTY.txt 约 185 KB，超过 Python csv 默认的 128 KB 字段上限。
+    csv.field_size_limit(10 * 1024 * 1024)
     bad: list[tuple[str, str, str]] = []
     total = 0
     with open(path, newline="", encoding="utf-8") as fh:

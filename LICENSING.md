@@ -14,7 +14,9 @@
 ## 三条必须守住的规则
 
 1. **每个源文件加 SPDX 头**
+   <!-- REUSE-IgnoreStart -->
    `# SPDX-License-Identifier: AGPL-3.0-or-later`（主仓）或 `MIT`（`schemas/` `mcp/`）
+   <!-- REUSE-IgnoreEnd -->
 
 2. **AGPL / GPL 组件只能以独立容器或子进程接入**
    放在 `adapters/` 下，通过 HTTP 或 CLI 调用。不 import、不 vendor、不 submodule、不打进主镜像。

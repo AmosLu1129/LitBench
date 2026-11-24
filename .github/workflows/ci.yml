@@ -12,8 +12,8 @@ jobs:
     name: 后端测试（pytest，SQLite，无外部服务）
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
@@ -27,7 +27,7 @@ jobs:
       # M8 的真实渲染测试依赖 pandoc 3.14 / typst 0.15.1；缓存 .data/tools 避免每次重下。
       # 中文字形由 fonts-noto-cjk 提供（与 Dockerfile 一致），PDF 文本断言才稳定。
       - name: 缓存导出工具（pandoc / typst）
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .data/tools
           key: litbench-tools-pandoc-3.14-typst-0.15.1
@@ -49,8 +49,8 @@ jobs:
     name: M4 MCP 薄层（pytest，MockTransport 假 API）
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
@@ -68,8 +68,8 @@ jobs:
     name: 文档计数一致性（当前基线锚点）
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -88,8 +88,8 @@ jobs:
     name: 前端构建（tsc --noEmit + vite build）
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: "20"
           cache: npm

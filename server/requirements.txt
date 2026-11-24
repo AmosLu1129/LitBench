@@ -15,5 +15,7 @@ httpx>=0.27
 python-multipart>=0.0.9
 pypdfium2>=4.30
 pypdf>=4.2
+# 缩略图裁剪与框复核标注（adapters/render.py / bbox_review.py），MIT-CMU
+Pillow>=10.0
 # 二维码过滤（figure_filter.py）：只用 cv2.QRCodeDetector，Apache-2.0；缺失时静默跳过
 opencv-python-headless>=4.10

@@ -81,6 +81,18 @@ def _download(url: str) -> bytes:
     return b"".join(chunks)
 
 
+def _find_pandoc_in(root: Path) -> Path | None:
+    """在解压目录中查找 pandoc（Windows 在顶层，Linux/macOS 在 bin/ 下）。"""
+    executable = "pandoc.exe" if sys.platform == "win32" else "pandoc"
+    matches = sorted(
+        path
+        for pattern in (f"*/{executable}", f"*/bin/{executable}")
+        for path in root.glob(pattern)
+        if path.is_file()
+    )
+    return matches[0] if matches else None
+
+
 def _extract(asset: str, payload: bytes, destination: Path) -> Path:
     """解压到 destination，返回 pandoc 可执行文件路径（做路径穿越检查）。"""
     destination.mkdir(parents=True, exist_ok=True)
@@ -101,11 +113,11 @@ def _extract(asset: str, payload: bytes, destination: Path) -> Path:
                     if destination.resolve() not in target.parents:
                         raise SystemExit(f"压缩包路径非法：{member.name}")
                 archive.extractall(destination)
-    executable = "pandoc.exe" if sys.platform == "win32" else "pandoc"
-    matches = sorted(destination.glob(f"*/{executable}"))
-    if not matches:
+    extracted = _find_pandoc_in(destination)
+    if extracted is None:
+        executable = "pandoc.exe" if sys.platform == "win32" else "pandoc"
         raise SystemExit(f"解压后没找到 {executable}（目录：{destination}）")
-    return matches[0]
+    return extracted
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -139,10 +151,14 @@ def main(argv: list[str] | None = None) -> int:
         else _repository_root() / ".data" / "tools" / "pandoc"
     )
     target_dir = destination / f"pandoc-{args.version}"
-    executable = target_dir / ("pandoc.exe" if sys.platform == "win32" else "pandoc")
-    if executable.is_file() and not args.force:
-        print(f"已存在：{executable}")
-        print(f"找到的 pandoc：{executable}")
+    exe_name = "pandoc.exe" if sys.platform == "win32" else "pandoc"
+    existing = next(
+        (p for p in (target_dir / exe_name, target_dir / "bin" / exe_name) if p.is_file()),
+        None,
+    )
+    if existing is not None and not args.force:
+        print(f"已存在：{existing}")
+        print(f"找到的 pandoc：{existing}")
         return 0
 
     url = (
@@ -156,7 +172,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"SHA-256 校验通过（{len(payload) / 1024 / 1024:.1f} MB）")
     extracted = _extract(asset, payload, destination)
     print(f"pandoc 已就位：{extracted}")
-    print("API 不需要改 PATH：find_pandoc() 会自动在 .data/tools/pandoc/*/ 下找。")
+    print("API 不需要改 PATH：find_pandoc() 会自动在 .data/tools/pandoc/*/（含 bin/）下找。")
     return 0
 
 
